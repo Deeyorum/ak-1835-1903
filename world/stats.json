@@ -1,0 +1,17 @@
+{
+  "pageCount": 1500,
+  "avgOutDegree": "17.87",
+  "isolatedPages": 178,
+  "largestComponent": 1500,
+  "largestComponentPercent": "100.0",
+  "samplePathLengths": [
+    5,
+    4,
+    4,
+    3,
+    6,
+    3,
+    5,
+    4
+  ]
+}

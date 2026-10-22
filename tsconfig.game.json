@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"]
+  },
+  "include": ["src/game/**/*", "test/**/*"],
+  // `test/olcum/*` Cloudflare Worker ortamına aittir (`Env`, `Request.url`)
+  // ve KENDİ paketinde tip kontrolünden geçer: `tsconfig.olcum.json`,
+  // `worker-configuration.d.ts` ile birlikte (`npm run typecheck:olcum`).
+  // Bu paket yalnız node tipleriyle derlendiği için o dosyalar burada
+  // hata verir.
+  //
+  // G4B-3a'da bulundu: G4B-2b bu dosyaları eklerken `test/**/*` globundan
+  // dışlamayı atlamış ve `typecheck:game` 19 hatayla KIRMIZI kalmıştı
+  // (o oturum yalnız `typecheck:worker` + `test:worker` koşturmuştu).
+  "exclude": ["test/olcum/**/*"]
+}

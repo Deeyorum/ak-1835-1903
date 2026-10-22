@@ -1,0 +1,20 @@
+{
+  "sccSize": 1295,
+  "sccPercentOfWorld": "86.3",
+  "totalSCCsFound": 205,
+  "directedDiameter": 8,
+  "averageDirectedDistance": "3.492",
+  "pairwiseDistanceHistogram": {
+    "1": 21750,
+    "2": 220251,
+    "3": 634492,
+    "4": 557048,
+    "5": 199444,
+    "6": 38429,
+    "7": 4135,
+    "8": 181
+  },
+  "totalOrderedPairs": 1675730,
+  "emptyTextPagesInSCC": 40,
+  "emptyTextPagesInWorld": 206
+}

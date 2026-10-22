@@ -1,0 +1,65 @@
+name = "ak-1835-1903"
+main = "src/worker/index.ts"
+compatibility_date = "2024-10-15"
+# G4A: src/game/hakemSuzgec.ts ve hakemModel.ts (G3) Node'un `Buffer`
+# API'sini kullanıyor (base64/hex kodlama, çıkış süzgeci için). Workers
+# çalışma zamanı bunu VARSAYILAN OLARAK sağlamaz — bu bayrak olmadan
+# tip kontrolü ve çalışma zamanı HATA verir (bkz. DEFTER.md "G4A").
+# Hand-rolled bir değiştirme, test edilmiş sızıntı süzgecini riske
+# atacağı için TERCİH EDİLMEDİ; resmi, iyi test edilmiş bu bayrak
+# tercih edildi.
+compatibility_flags = ["nodejs_compat"]
+
+# G4A: günlük maç kotası (bot başına), ortam değişkeni olarak yapılandırılabilir.
+# G4B-1: model adı KODA GÖMÜLMEZ, buradan gelir (bkz. src/worker/workersAiHakemi.ts).
+#
+# G4B-2a (Madde 3) — MODEL SEÇİLDİ: `@cf/meta/llama-3.2-1b-instruct`.
+# Gerekçe: `wrangler ai models` ile alınan GÜNCEL katalogda (71 model,
+# 37'si Text Generation) doğrulanan EN KÜÇÜK uygun talimat (instruct)
+# modeli. G4B-1'in 3 adayı katalogla karşılaştırıldı:
+#   - @cf/meta/llama-3.2-1b-instruct  → VAR   (seçilen)
+#   - @cf/qwen/qwen1.5-1.8b-chat      → YOK   (katalogda değil)
+#   - @cf/meta/llama-3.1-8b-instruct  → YOK   (yalnız `-fp8` varyantı var)
+# Daha küçük görünen alternatifler ELENDİ: `gemma-2b-it-lora` /
+# `llama-3.2-3b-instruct`'in LoRA yolu ek adaptör gerektirir,
+# `phonellm-mini-alpha-2` alpha. Katalog fiyatı: 0,027 USD / M girdi
+# belirteci, 0,201 USD / M çıktı belirteci; bağlam penceresi 60.000.
+#
+# ÜCRETSİZ NÖRON BÜTÇESİ — VARSAYIMLI HESAP (katalog çıktısı nöron
+# vermez, yalnız USD verir; aşağıdaki dönüşüm Cloudflare'in belgelediği
+# 0,011 USD / 1.000 nöron oranına ve ücretsiz katmanın 10.000 nöron/gün
+# sınırına DAYANIR — bu iki sayı CLI'dan DOĞRULANMADI, G4C'de dağıtım
+# panosundan teyit edilmeli):
+#   hakem çağrısı ≈ 100 girdi + 30 çıktı belirteci
+#     ≈ 100×0,027/1e6 + 30×0,201/1e6 ≈ 0,0000087 USD ≈ 0,8 nöron
+#   ⇒ 10.000 nöron/gün ≈ 12.000 hakem çağrısı/gün
+#   ⇒ MAC_MODEL_CAGRI_SINIRI=40 ile ≈ 300 maç/gün (DAILY_MATCH_QUOTA
+#     bot başına 100 olduğundan, 3 etkin bot bütçeyi doldurabilir).
+# G4B-1b (Madde 4): maç başına model çağrısı üst sınırı — aşımda sabit
+# yanıt (bkz. src/worker/modelCagriSinirlayici.ts), maç DÜŞMEZ.
+# G4B-2a (Madde 1): HAKEM_MODU — "sahte" (VARSAYILAN, ağsız, G4A/G4B-1
+# davranışı) ya da "workersAi" (gerçek model, src/worker/hakemKopru.ts'in
+# ön geçişi). Tanınmayan bir değer SESSİZCE sahteye DÜŞMEZ, hata verir.
+# Varsayılanın "sahte" olması kasıtlı: testler ve ölçümler ağa ÇIKMAZ,
+# gerçek model yalnız açıkça seçilince kullanılır.
+[vars]
+DAILY_MATCH_QUOTA = "100"
+HAKEM_MODU = "sahte"
+AI_MODEL_NAME = "@cf/meta/llama-3.2-1b-instruct"
+MAC_MODEL_CAGRI_SINIRI = "40"
+
+# G4B-1: Workers AI binding. Gerçek bir kaynak OLUŞTURMAZ (D1'in
+# aksine Workers AI önceden-oluşturma gerektirmez) — yalnız hesabın
+# Workers AI'ına erişim bildirir, dağıtılmadan hiçbir ağ çağrısı
+# yapılmaz. Yerel `wrangler dev` bu binding'i UZAKTAN çağırır (gerçek
+# bir model isteği ağa çıkar) — bu yüzden G4B-1'de env.AI GERÇEKTEN
+# ÇAĞRILMADI, adaptör yalnız sahte bir AI ile sınandı.
+[ai]
+binding = "AI"
+
+# G4C-2: uzak D1 oluşturuldu (wrangler d1 create), database_id atandı.
+# Kendi D1 veritabanınızı oluşturup buraya kendi database_id'nizi yazın.
+[[d1_databases]]
+binding = "DB"
+database_name = "ak-1835-1903"
+database_id = "<YOUR_D1_DATABASE_ID>"

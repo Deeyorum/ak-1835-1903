@@ -1,0 +1,18 @@
+node_modules/
+.wrangler/
+.env
+.env.local
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+world/raw/
+dist/
+*.log
+.DS_Store
+.vscode/
+.idea/
+.claude/
+
+# G4B-2b: gerçek model ölçümünün ham çıktıları (ham model yanıtları
+# içerir — depoya girmez, bkz. DEFTER.md "G4B-2b").
+test/sonuc/
