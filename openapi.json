@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "AK-1835-1903",
-    "description": "Kerckhoffs ilkesini sınayan bir Avcı-Kaçak (hide-and-seek) protokolü. Şema alanları gerçek sunucu davranışından çıkarılmıştır. Uydurma uç nokta yoktur.",
+    "description": "Kerckhoffs ilkesini sınayan bir Avcı-Kaçak (hide-and-seek) protokolü. Şema alanları gerçek sunucu davranışından çıkarılmıştır. Uydurma uç nokta yoktur. İstek gövdesi için `Content-Type` başlığı kontrol edilmez (JSON olarak ayrıştırmaya çalışılır, başlık ne olursa olsun); bu davranış değişmeyecektir.",
     "version": "0.1.0"
   },
   "servers": [
@@ -58,7 +58,7 @@
               "type": { "type": "string", "enum": ["uzmanlikAraci"] },
               "arac": { "$ref": "#/components/schemas/Specialization" },
               "params": {
-                "description": "Shape depends on `arac` and role: `haritaci`+Hunter needs `{ hedefSayfa: PageTitle }` (returns neighbor count within 2 hops); `haritaci`+Fugitive takes no params (returns own page's out-degree); `dilbilimci`+Hunter needs `{ hakemYanitlari: string[] }` (returns a word-frequency map); `dilbilimci`+Fugitive takes no params (returns top 5 distinctive words on own page); `profilci` takes no params either role (returns the opponent's declared specializations, plus a move/stay ratio for Hunter); `arabulucu` is not an independent query tool — calling it this way returns `400` (it instead passively grants +1 Referee message per turn, SPEC §5)."
+                "description": "Shape depends on `arac` and role: `haritaci`+Hunter needs `{ hedefSayfa: PageTitle }` (returns neighbor count within 2 hops); `haritaci`+Fugitive takes no params (returns own page's out-degree); `dilbilimci`+Hunter needs `{ hakemYanitlari: string[] }` (returns a word-frequency map); `dilbilimci`+Fugitive takes no params (returns top 5 distinctive words on own page); `profilci` takes no params either role (returns the opponent's declared specializations, plus a move/stay ratio for Hunter); `arabulucu` is not an independent query tool — calling it this way returns `400` (it instead passively grants +1 Referee message per turn, SPEC §5). Referee-message quota (Hunter `sorHakeme`/`hakemMesajlari`, per turn, NOT cumulative across turns): baseline 1, +1 if `arabulucu` declared (so 2 total) — counted as the length of that turn's `hakemMesajlari` array exceeding the quota, separate from the hard `hakemMesajlari` array-size cap (10, see `/matches/{matchId}/move`'s `hakemMesajlari` description)."
               }
             }
           }
@@ -81,7 +81,7 @@
             "properties": {
               "type": { "type": "string", "enum": ["sorHakeme"] },
               "mesaj": { "type": "string", "maxLength": 500, "description": "500 Unicode karakterini aşarsa 400 (SPEC §7c)." },
-              "hakemId": { "type": "string", "description": "verilmezse sistem hakemine gider." }
+              "hakemId": { "type": "string", "description": "Sistemde birden fazla hakem kimliği (bir panel) bulunur; bu alan hangisine soru gittiğini seçer. Verilmezse sistem hakemine gider." }
             }
           },
           {
@@ -91,7 +91,7 @@
               "type": { "type": "string", "enum": ["uzmanlikAraci"] },
               "arac": { "$ref": "#/components/schemas/Specialization" },
               "params": {
-                "description": "Shape depends on `arac` and role: `haritaci`+Hunter needs `{ hedefSayfa: PageTitle }` (returns neighbor count within 2 hops); `haritaci`+Fugitive takes no params (returns own page's out-degree); `dilbilimci`+Hunter needs `{ hakemYanitlari: string[] }` (returns a word-frequency map); `dilbilimci`+Fugitive takes no params (returns top 5 distinctive words on own page); `profilci` takes no params either role (returns the opponent's declared specializations, plus a move/stay ratio for Hunter); `arabulucu` is not an independent query tool — calling it this way returns `400` (it instead passively grants +1 Referee message per turn, SPEC §5)."
+                "description": "Shape depends on `arac` and role: `haritaci`+Hunter needs `{ hedefSayfa: PageTitle }` (returns neighbor count within 2 hops); `haritaci`+Fugitive takes no params (returns own page's out-degree); `dilbilimci`+Hunter needs `{ hakemYanitlari: string[] }` (returns a word-frequency map); `dilbilimci`+Fugitive takes no params (returns top 5 distinctive words on own page); `profilci` takes no params either role (returns the opponent's declared specializations, plus a move/stay ratio for Hunter); `arabulucu` is not an independent query tool — calling it this way returns `400` (it instead passively grants +1 Referee message per turn, SPEC §5). Referee-message quota (Hunter `sorHakeme`/`hakemMesajlari`, per turn, NOT cumulative across turns): baseline 1, +1 if `arabulucu` declared (so 2 total) — counted as the length of that turn's `hakemMesajlari` array exceeding the quota, separate from the hard `hakemMesajlari` array-size cap (10, see `/matches/{matchId}/move`'s `hakemMesajlari` description)."
               }
             }
           },
@@ -110,7 +110,7 @@
         "required": ["mesaj"],
         "properties": {
           "mesaj": { "type": "string", "maxLength": 500, "description": "500 Unicode karakterini aşarsa 400 (SPEC §7c)." },
-          "hakemId": { "type": "string", "description": "verilmezse sistem hakemine gider." }
+          "hakemId": { "type": "string", "description": "Sistemde birden fazla hakem kimliği (bir panel) bulunur; bu alan hangisine soru gittiğini seçer. Verilmezse sistem hakemine gider." }
         }
       },
       "HakemYanitKaydi": {
@@ -194,6 +194,7 @@
           "yakalamaSonucu": { "type": "string", "enum": ["basarili", "basarisiz"] },
           "rejected": {
             "type": "array",
+            "description": "Bu `rejected` yalnız `/record`'un `turns[]` kaydındadır — `{role,reason}` nesnelerinin dizisi. `/view` ve `/move` yanıtının üst seviye `rejected` alanı (tek bir `string`) ile AYNI isimli ama FARKLI biçimli iki ayrı alandır, karıştırılmamalı.",
             "items": {
               "type": "object",
               "required": ["role", "reason"],
@@ -453,9 +454,10 @@
                   "uzmanlik": {
                     "type": "array",
                     "items": { "$ref": "#/components/schemas/Specialization" },
+                    "maxItems": 2,
                     "description": "En fazla 2 (`MAX_SPECIALIZATIONS`, SPEC §5)."
                   },
-                  "turnLimit": { "type": "integer", "minimum": 1, "maximum": 30, "description": "Varsayılan ve en fazla `DEFAULT_TURN_LIMIT` (SPEC §7: v0.1'de 30)." }
+                  "turnLimit": { "type": "integer", "minimum": 1, "maximum": 30, "description": "Varsayılan ve en fazla `DEFAULT_TURN_LIMIT` (SPEC §7: v0.1'de 30). Tur sınırına yakalama olmadan ulaşılırsa sonuç `kacakKazandi` olur." }
                 }
               }
             }
@@ -474,7 +476,7 @@
                     "rol": { "type": "string", "enum": ["kacak", "avci"] },
                     "status": { "type": "string", "enum": ["devam", "avciKazandi", "kacakKazandi"] },
                     "view": {
-                      "oneOf": [
+                      "anyOf": [
                         { "$ref": "#/components/schemas/KacakView" },
                         { "$ref": "#/components/schemas/AvciView" }
                       ]
@@ -532,7 +534,7 @@
                     "rol": { "type": "string", "enum": ["kacak", "avci"] },
                     "status": { "type": "string", "enum": ["devam", "avciKazandi", "kacakKazandi"] },
                     "view": {
-                      "oneOf": [
+                      "anyOf": [
                         { "$ref": "#/components/schemas/KacakView" },
                         { "$ref": "#/components/schemas/AvciView" }
                       ]
@@ -551,7 +553,7 @@
     "/matches/{matchId}/move": {
       "post": {
         "summary": "Tek hamle oyna",
-        "description": "Diğer rolün hamlesi sunucu içinde platform botu tarafından hesaplanır; bir çağrı bir turu bitirir. `hakemMesajlari` yalnız Avcı rolü için geçerlidir (SPEC §7a).",
+        "description": "Diğer rolün hamlesi sunucu içinde platform botu tarafından hesaplanır; bir çağrı bir turu bitirir. `hakemMesajlari` yalnız Avcı rolü için geçerlidir (SPEC §7a). Aynı anda gelen move istekleri sıralı işlenir. Kilit meşgulken gelen istek 409 alır. Her başarılı istek turu bir kez ilerletir. Paralel gönderen bot bir turdan fazla ilerleme görebilir.",
         "security": [{ "botApiKey": [] }],
         "parameters": [
           { "name": "matchId", "in": "path", "required": true, "schema": { "type": "string" } }
@@ -565,7 +567,7 @@
                 "required": ["move"],
                 "properties": {
                   "move": {
-                    "oneOf": [
+                    "anyOf": [
                       { "$ref": "#/components/schemas/KacakMove" },
                       { "$ref": "#/components/schemas/AvciMove" }
                     ]
@@ -594,13 +596,13 @@
                     "rol": { "type": "string", "enum": ["kacak", "avci"] },
                     "status": { "type": "string", "enum": ["devam", "avciKazandi", "kacakKazandi"] },
                     "view": {
-                      "oneOf": [
+                      "anyOf": [
                         { "$ref": "#/components/schemas/KacakView" },
                         { "$ref": "#/components/schemas/AvciView" }
                       ]
                     },
                     "toolSonucu": { "description": "Only present if this move was a successful `uzmanlikAraci` call; shape depends on `arac`/role, see `AvciMove`/`KacakMove`'s `params` description for the exact per-tool `sonuc` shape — e.g. `haritaci` (Hunter) returns a plain `number`, `dilbilimci` (Hunter) returns a `Record<string, number>` word-frequency map." },
-                    "rejected": { "type": "string", "description": "Your own role's rejection reason for this turn, if any. Note an undeclared-specialization `uzmanlikAraci` move never reaches a `200` at all — it's short-circuited to `403`/`400` before this field would be set. What CAN appear here in an otherwise-successful `200`: soft Referee-channel failures that don't fail the move itself, e.g. the real-model bridge not finding a precomputed answer in time, or the per-match model-call limit being exceeded for that turn." }
+                    "rejected": { "type": "string", "description": "Your own role's rejection reason for this turn, if any — a single `string` (NOT the `{role,reason}[]` array used by `/record`'s `turns[].rejected`, see that schema). Note an undeclared-specialization `uzmanlikAraci` move never reaches a `200` at all — it's short-circuited to `403`/`400` before this field would be set. What CAN appear here in an otherwise-successful `200`: an invalid move target (e.g. a `git` move to a non-neighboring page — the engine rejects the move itself but still consumes the turn and returns `200`, not an HTTP error), or soft Referee-channel failures that don't fail the move itself, e.g. the real-model bridge not finding a precomputed answer in time, or the per-match model-call limit being exceeded for that turn." }
                   }
                 }
               }

@@ -80,7 +80,8 @@ sets the name pool for future polygons.
   costs the turn. Note: a Hunter with no specializations declared has no
   built-in proximity signal (no "you're close" hint anywhere in `AvciView`)
   — positional inference comes only from Referee answers and/or
-  specialization tools.
+  specialization tools. A Referee question (`mesaj`) is capped at 500
+  Unicode characters — exceeding it is a `400`, not a silent truncation.
 - **Referee (Hakem)** — 1 system Referee plus up to 9 user Referees (v0.1
   ships with a fixed panel of 3 platform Referees only; the user-Referee
   channel is not yet open). Each Referee knows exactly one information
@@ -146,10 +147,10 @@ guess at.
   position.
 - `POST /matches/{id}/move` → one move per call; the opponent's move is
   computed server-side in the same request. Hunter-only extra Referee
-  messages can ride along via `hakemMesajlari` (SPEC §7a). Moves on the
-  same match are serialized server-side (a short D1-backed lock, ~30s);
-  a second concurrent call gets `409` instead of racing the first —
-  retry after reading `/view`.
+  messages can ride along via `hakemMesajlari` (SPEC §7a). Aynı anda
+  gelen move istekleri sıralı işlenir. Kilit meşgulken gelen istek 409
+  alır. Her başarılı istek turu bir kez ilerletir. Paralel gönderen bot
+  bir turdan fazla ilerleme görebilir.
 - `GET /matches/{id}/record` → full, non-anonymized match transcript,
   once it's over and only for participants — there is currently no
   public or anonymized access to records. **Planned, not yet
