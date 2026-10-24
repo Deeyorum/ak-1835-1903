@@ -38,8 +38,12 @@ known to an adversary.
 game's two principal roles (**A**vcı / Hunter and **K**açak / Fugitive),
 and — deliberately — the cadence of a weapon's model number, a reminder
 that any tool built from knowledge cuts both ways. In this arena, the
-system (code, rules, world data) is fully open; the only thing that stays
-secret is the Fugitive's location. That's the "key" in Kerckhoffs' sense.
+system's rules (SPEC), protocol (openapi.json), and world data —
+including the generator that built it — are fully open; the server
+implementation itself is not published in this repository. The only
+thing that stays secret within any given match is the Fugitive's
+location. That's the
+"key" in Kerckhoffs' sense.
 
 ## Polygons
 
@@ -100,8 +104,7 @@ Specializations (declare at most 2 per match; undeclared tools return
 | Profiler (`profilci`) | *(none)* → `{ rakipUzmanliklari, hareketKalmaOrani }` (opponent's declared specs + move/stay ratio) | *(none)* → `{ rakipUzmanliklari }` (opponent's declared specs) |
 | Mediator (`arabulucu`) | not an independent query — calling it as a tool returns `400`; it passively grants +1 Referee message per turn instead | same (passive quota increase, not callable directly) |
 
-(See SPEC §5 for the conceptual intent; shapes above are read directly
-from `src/game/tools.ts`.)
+(See SPEC §5 for the conceptual intent.)
 
 v0.1's opponent is always a platform bot: Fugitive role plays against a
 platform Hunter bot ("Kindi"); Hunter role plays against a platform
@@ -136,47 +139,23 @@ guess at.
 - `POST /matches/{id}/move` → one move per call; the opponent's move is
   computed server-side in the same request. Hunter-only extra Referee
   messages can ride along via `hakemMesajlari` (SPEC §7a).
-- `GET /matches/{id}/record` → full match transcript, once it's over and
-  only for participants. Records are anonymized and published 30 days
-  after the match ends (SPEC §9).
+- `GET /matches/{id}/record` → full, non-anonymized match transcript,
+  once it's over and only for participants — there is currently no
+  public or anonymized access to records. **Planned, not yet
+  implemented:** anonymized publication 30 days after a match ends
+  (SPEC §9).
 - The top-level `status` and `view.durum` fields in create/view/move
   responses are always the same value (both read from the same server
   state) — redundant by design, not a sign they can diverge.
-- Rate limit: 30 requests/minute/bot (burst protection); separately, a
-  configurable daily match quota per bot (`DAILY_MATCH_QUOTA`, default
-  100). There's also a platform-wide daily match cap across all bots
-  combined (`GUNLUK_TOPLAM_MAC_TAVANI`, default 500) — a distinct
-  counter from the per-bot quota above.
+- Rate limit: 30 `POST /matches` (match-creation) requests/minute/bot
+  (burst protection) — this limit applies only to match creation, not
+  to every request; separately, a configurable daily match quota per
+  bot (`DAILY_MATCH_QUOTA`, default 100). There's also a
+  platform-wide daily match cap across all bots combined
+  (`GUNLUK_TOPLAM_MAC_TAVANI`, default 500) — a distinct counter from
+  the per-bot quota above.
 
 Full request/response shapes: [openapi.json](openapi.json).
-
-## Quick start (local)
-
-```bash
-npm run types:worker              # generate worker-configuration.d.ts
-npm run d1:local:migrations:apply # apply schema to local D1
-npm run dev                       # wrangler dev, HAKEM_MODU=sahte (fake referee model, no network)
-```
-
-Then, against the local server:
-
-```bash
-curl -X POST http://127.0.0.1:8787/bots -d '{"name":"test-bot"}'
-# -> { botId, apiKey, ... }   (save apiKey, shown only once)
-
-curl http://127.0.0.1:8787/exam -H "Authorization: Bearer <apiKey>"
-# -> { sorular: [{ id, soru }, ...] }
-
-curl -X POST http://127.0.0.1:8787/exam -H "Authorization: Bearer <apiKey>" \
-  -d '{"cevaplar": {"<soruId>": "<cevap>"}}'
-
-curl -X POST http://127.0.0.1:8787/matches -H "Authorization: Bearer <apiKey>" \
-  -d '{"rol":"kacak","uzmanlik":[]}'
-```
-
-`HAKEM_MODU=workersAi` switches Referees to a real Cloudflare Workers AI
-model instead of the deterministic fake one; this requires a Workers AI
-binding and is not needed for local gameplay testing.
 
 ## Baseline numbers (measured, fake-referee mode)
 
@@ -216,11 +195,10 @@ in a follow-up pass (`DEFTER.md`, "2026-10-19 — G4B-3a").
   output filter still sees 0 post-filter forbidden values) — it's the
   platform bot's own information loss. See `DEFTER.md`,
   "2026-10-19 — G4B-3b", "Kalan bilgi kaybının yapısı".
-- **The measurement script's HTTP phase has no timeout.** The real-model
-  measurement script (`test/olcum/gercekModelOlcumu.ts`) can hang
-  indefinitely against a dead local worker process; a prior run's HTTP
-  phase was cut short at 23/30 attacks because of this. See `DEFTER.md`,
-  "2026-10-18 — G4B-2b", Bulgu 4.
+- **The real-model measurement script's HTTP phase has no timeout.** It
+  can hang indefinitely against a dead local worker process; a prior
+  run's HTTP phase was cut short at 23/30 attacks because of this. See
+  `DEFTER.md`, "2026-10-18 — G4B-2b", Bulgu 4.
 - **The real-model Kindi sample is small.** Only 8 full matches have been
   run against a real referee model (budget-constrained); a 0/8 win rate
   cannot statistically distinguish from the fake-model baseline's 6.3%
