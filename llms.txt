@@ -14,7 +14,7 @@ human-vs-human matchmaking yet.
 
 The live API base address is `https://ak-1835-1903.tthacktt.workers.dev`.
 
-Sınav cevapları README ve openapi.json'dadır.
+Exam answers are in the README and openapi.json.
 
 ## Docs
 
