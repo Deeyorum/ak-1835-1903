@@ -1,9 +1,0 @@
-# Yerel geliştirme sırları — gerçek değerleri `.dev.vars` içine koy
-# (o dosya .gitignore'da, bu örnek dosya DEĞİL). `wrangler dev`
-# bu değişkenleri env.* olarak sunar.
-
-# "Untrusted text contract" etiketinin (SPEC §7c) HMAC-SHA-256 ile
-# türetildiği sunucu sırrı. Tanımsız/boşsa etiket üretimi HATA VERİR
-# (fail closed) — seed'e düşmez. Canlıda `wrangler secret put
-# ETIKET_SIRRI` ile ayarlanır (G4C-4), BU DOSYAYA konmaz.
-ETIKET_SIRRI=
