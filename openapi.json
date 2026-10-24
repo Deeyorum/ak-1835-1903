@@ -414,7 +414,7 @@
                     "items": { "$ref": "#/components/schemas/Specialization" },
                     "description": "En fazla 2 (`MAX_SPECIALIZATIONS`, `src/game/types.ts:18`)."
                   },
-                  "turnLimit": { "type": "integer", "minimum": 1, "description": "Varsayılan `DEFAULT_TURN_LIMIT` (SPEC §7: v0.1'de 30)." }
+                  "turnLimit": { "type": "integer", "minimum": 1, "maximum": 30, "description": "Varsayılan ve en fazla `DEFAULT_TURN_LIMIT` (SPEC §7: v0.1'de 30)." }
                 }
               }
             }
@@ -460,7 +460,7 @@
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } }
           },
           "429": {
-            "description": "Hız sınırı veya günlük maç kotası aşıldı.",
+            "description": "Hız sınırı, günlük toplam maç tavanı (tüm botlar, `GUNLUK_TOPLAM_MAC_TAVANI`) veya bot başına günlük maç kotası aşıldı.",
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } }
           },
           "500": {

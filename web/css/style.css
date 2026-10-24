@@ -1,0 +1,284 @@
+:root {
+  --bg: #1b2418;
+  --block-a: #6b4e37;
+  --block-b: #5d4330;
+  --block-c: #775840;
+  --line: #2c2218;
+  --text: #e8dcc0;
+  --accent: #7da04b;
+  --code: #d7c28a;
+  --gear: #3f5233;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+#app {
+  position: relative;
+  min-height: 100vh;
+  padding: 2.5rem 1.5rem 4rem;
+  max-width: 960px;
+  margin: 0 auto;
+  transition: opacity 200ms ease;
+}
+
+#app.fading {
+  opacity: 0;
+}
+
+.page[hidden] {
+  display: none;
+}
+
+.site-header h1 {
+  font-size: 2rem;
+  letter-spacing: 0.04em;
+  margin: 0 0 0.3rem;
+}
+
+.subtitle {
+  color: var(--code);
+  margin: 0 0 1.5rem;
+}
+
+.intro {
+  line-height: 1.6;
+  max-width: 42rem;
+}
+
+.back-link {
+  display: inline-block;
+  color: var(--accent);
+  text-decoration: none;
+  margin-bottom: 1.5rem;
+}
+
+.back-link:hover {
+  text-decoration: underline;
+}
+
+h1 {
+  color: var(--text);
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.card {
+  display: block;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 1rem 1.1rem;
+  text-decoration: none;
+  color: var(--text);
+  background: var(--block-b);
+  transition: transform 150ms ease, border-color 150ms ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+}
+
+.card:nth-child(3n+1) { background: var(--block-a); }
+.card:nth-child(3n+2) { background: var(--block-b); }
+.card:nth-child(3n+3) { background: var(--block-c); }
+
+.card h2 {
+  margin: 0 0 0.4rem;
+  font-size: 1.15rem;
+}
+
+.card p {
+  font-size: 0.85rem;
+  line-height: 1.45;
+  margin: 0.5rem 0 0;
+}
+
+.tag {
+  display: inline-block;
+  font-size: 0.7rem;
+  letter-spacing: 0.03em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 3px;
+  text-transform: uppercase;
+}
+
+.tag-live {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.tag-coming-soon {
+  background: var(--gear);
+  color: var(--code);
+}
+
+.tag-sub {
+  display: block;
+  font-size: 0.6rem;
+  text-transform: lowercase;
+  letter-spacing: 0;
+  opacity: 0.75;
+  margin-top: 0.1rem;
+}
+
+#transition-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 50;
+  display: none;
+  background: var(--bg);
+}
+
+#transition-canvas.active {
+  display: block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    transition: none;
+  }
+}
+
+.sim-wrap {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--line);
+}
+
+.sim-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+  padding: 0.2rem 0.6rem;
+  border-radius: 3px;
+  background: var(--gear);
+  color: var(--code);
+  margin: 0 0 0.75rem;
+}
+
+.sim-note {
+  font-size: 0.85rem;
+  color: var(--code);
+  max-width: 42rem;
+  line-height: 1.5;
+}
+
+.sim-guide {
+  font-size: 0.85rem;
+  color: var(--text);
+  max-width: 42rem;
+  line-height: 1.5;
+  margin: 0.75rem 0 0;
+  padding-left: 1.4rem;
+}
+
+.sim-note-inline {
+  font-size: 0.8rem;
+  color: var(--accent);
+  min-height: 1.1rem;
+  margin: 0 0 0.5rem;
+}
+
+.sim-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.sim-tab {
+  font: inherit;
+  color: var(--text);
+  background: var(--block-b);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 0.5rem 0.9rem;
+  cursor: pointer;
+}
+
+.sim-tab[aria-selected="true"] {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+}
+
+.sim-panel[hidden] {
+  display: none;
+}
+
+.sim-toolbar {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.sim-menu {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.sim-wrap button {
+  font: inherit;
+  color: var(--text);
+  background: var(--block-c);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 0.45rem 0.8rem;
+  cursor: pointer;
+}
+
+.sim-wrap button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.sim-wrap button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.sim-log {
+  list-style: none;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.sim-log li {
+  padding: 0.4rem 0.6rem;
+  border-left: 2px solid var(--accent);
+  margin-bottom: 0.4rem;
+  background: var(--block-b);
+}
+
+.sim-candidates {
+  font-size: 0.8rem;
+  color: var(--code);
+  max-width: 42rem;
+  line-height: 1.5;
+}
+
+.sim-result {
+  font-size: 0.95rem;
+  color: var(--accent);
+  min-height: 1.3rem;
+}
