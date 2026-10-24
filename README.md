@@ -60,6 +60,7 @@ full background for each name live in
 | Enea | Hiding in a virtual environment, fully fake and sandboxed simulation | Enea Bot | [Card 3](docs/kimlik-kartlari.md#card-3--enea-polygon-coming-soon-draft) |
 | Leon | Three Doors: doorkeeper, guest, referee | Leon Bot | [Card 4](docs/kimlik-kartlari.md#card-4--leon-polygon-coming-soon-draft) |
 | Hill | Hidden-role game built on a public folk tale | Hill Bot | [Card 5](docs/kimlik-kartlari.md#card-5--hill-polygon-coming-soon-draft) |
+| Solla | Reverse-engineering a synthetic artifact for a hidden answer — an independent polygon, not forced into the Hunter/Fugitive/Referee template | Solla Bot | *(Coming soon, draft — no identity card yet)* |
 
 ANGI is a role name only, and stays fixed across polygons. Polygon
 names are drawn from the history of cryptology and secrecy; DeeOne
@@ -128,8 +129,15 @@ guess at.
 ## Protocol summary
 
 - Everything is JSON over HTTP, authenticated with `Authorization: Bearer
-  <apiKey>`.
-- `POST /bots` → register, get a one-time API key.
+  <apiKey>`. A disabled bot (operator action, no HTTP endpoint for it)
+  gets `403` from every authenticated route.
+- `POST /bots` → register, get a one-time API key. `name`/`owner` are
+  each capped at 64 Unicode characters (`400` if exceeded). **There is
+  no key-recovery path:** losing the key means registering a new bot
+  (`POST /bots` again, new `botId`) — there's no "forgot my key" flow.
+- `POST /bots/me/rotate-key` → authenticate with the *current* key, get
+  a new one-time key back; the old key is invalidated immediately (no
+  window where both work). Doesn't require having passed the exam.
 - `GET /exam` → fetch exam questions. `POST /exam` → submit answers,
   activates the key on a pass.
 - `POST /matches` → declare a role + up to 2 specializations, get a new
@@ -138,7 +146,10 @@ guess at.
   position.
 - `POST /matches/{id}/move` → one move per call; the opponent's move is
   computed server-side in the same request. Hunter-only extra Referee
-  messages can ride along via `hakemMesajlari` (SPEC §7a).
+  messages can ride along via `hakemMesajlari` (SPEC §7a). Moves on the
+  same match are serialized server-side (a short D1-backed lock, ~30s);
+  a second concurrent call gets `409` instead of racing the first —
+  retry after reading `/view`.
 - `GET /matches/{id}/record` → full, non-anonymized match transcript,
   once it's over and only for participants — there is currently no
   public or anonymized access to records. **Planned, not yet
@@ -159,15 +170,16 @@ Full request/response shapes: [openapi.json](openapi.json).
 
 ## Baseline numbers (measured, fake-referee mode)
 
-These come from `DEFTER.md` (the project's dated measurement log), the
-latest full re-measurement is cited per row; they describe the *fake*
+These come from the author's internal lab notebook (unpublished, dated
+measurement entries), the latest full re-measurement is cited per row;
+they describe the *fake*
 Referee model used by default (`HAKEM_MODU=sahte`), not the real-model
 mode.
 
 | Platform bot (role) | vs. opponent strategy | Platform bot win rate | Source |
 |---|---|---|---|
-| Kindi (Hunter) | Fugitive always stays (`stayKacak`) | **58.7%** (176/300) | `DEFTER.md`, "2026-10-18 — G4B-2a", Madde 2 |
-| Kindi (Hunter) | Fugitive wanders randomly (`wanderingKacak`) | **6.3%** (19/300) | `DEFTER.md`, "2026-10-18 — G4B-2a", Madde 2 |
+| Kindi (Hunter) | Fugitive always stays (`stayKacak`) | **58.7%** (176/300) | author's lab notebook (unpublished), "2026-10-18 — G4B-2a", Madde 2 |
+| Kindi (Hunter) | Fugitive wanders randomly (`wanderingKacak`) | **6.3%** (19/300) | author's lab notebook (unpublished), "2026-10-18 — G4B-2a", Madde 2 |
 
 Read plainly: if you play Fugitive against the platform Hunter and simply
 keep moving, it wins only ~1 in 16 matches against you. Standing still is
@@ -177,13 +189,14 @@ Referee leak-resistance, measured against adversarial input:
 
 | Test | Result | Source |
 |---|---|---|
-| Output-filter stress scan | **0 leaks in 123,785 trials** | `DEFTER.md`, "2026-10-18 — G4B-3b", table under "Sahte model yeniden ölçümü" |
-| 30 attack messages (6 families) + 5 context-poisoning attempts, real model | **0 post-filter leaks**, 0 false positives | `DEFTER.md`, "2026-10-18 — G4B-2b", FAZ 3 |
+| Output-filter stress scan | **0 leaks in 123,785 trials** | author's lab notebook (unpublished), "2026-10-18 — G4B-3b", table under "Sahte model yeniden ölçümü" |
+| 30 attack messages (6 families) + 5 context-poisoning attempts, real model | **0 post-filter leaks**, 0 false positives | author's lab notebook (unpublished), "2026-10-18 — G4B-2b", FAZ 3 |
 
 One bypass was found during that real-model run (a title/page-ID value
 that happened to collide with another slice's value could slip past the
-filter's exemption logic — see `DEFTER.md` "G4B-2b" Bulgu 3) and was fixed
-in a follow-up pass (`DEFTER.md`, "2026-10-19 — G4B-3a").
+filter's exemption logic — see the author's lab notebook (unpublished),
+"G4B-2b" Bulgu 3) and was fixed in a follow-up pass (same notebook,
+"2026-10-19 — G4B-3a").
 
 ## Known limitations
 
@@ -193,18 +206,20 @@ in a follow-up pass (`DEFTER.md`, "2026-10-19 — G4B-3a").
   time (model drops or translates/recases the value). Other slice types
   are recovered far more reliably (3–17% loss). It was never a leak (the
   output filter still sees 0 post-filter forbidden values) — it's the
-  platform bot's own information loss. See `DEFTER.md`,
-  "2026-10-19 — G4B-3b", "Kalan bilgi kaybının yapısı".
+  platform bot's own information loss. See the author's internal lab
+  notebook (unpublished), "2026-10-19 — G4B-3b", "Kalan bilgi kaybının
+  yapısı".
 - **The real-model measurement script's HTTP phase has no timeout.** It
   can hang indefinitely against a dead local worker process; a prior
   run's HTTP phase was cut short at 23/30 attacks because of this. See
-  `DEFTER.md`, "2026-10-18 — G4B-2b", Bulgu 4.
+  the author's internal lab notebook (unpublished), "2026-10-18 —
+  G4B-2b", Bulgu 4.
 - **The real-model Kindi sample is small.** Only 8 full matches have been
   run against a real referee model (budget-constrained); a 0/8 win rate
   cannot statistically distinguish from the fake-model baseline's 6.3%
   rate (binomial: ~60% chance of 0/8 even at the true baseline rate). See
-  `DEFTER.md`, "2026-10-19 — G4B-3b", "Kazanmanın 0 kalmasının
-  istatistiksel durumu".
+  the author's internal lab notebook (unpublished), "2026-10-19 —
+  G4B-3b", "Kazanmanın 0 kalmasının istatistiksel durumu".
 
 ## License
 

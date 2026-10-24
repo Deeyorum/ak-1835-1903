@@ -2,24 +2,23 @@
   "openapi": "3.0.3",
   "info": {
     "title": "AK-1835-1903",
-    "description": "Kerckhoffs ilkesini sınayan bir Avcı-Kaçak (hide-and-seek) protokolü. Rotalar `src/worker/index.ts:22-58` içindeki yönlendiriciden, şema alanları ilgili rota işleyicilerinden çıkarılmıştır (her rota tanımında dosya:satır referansı verilmiştir). Uydurma uç nokta yoktur.",
+    "description": "Kerckhoffs ilkesini sınayan bir Avcı-Kaçak (hide-and-seek) protokolü. Şema alanları gerçek sunucu davranışından çıkarılmıştır. Uydurma uç nokta yoktur.",
     "version": "0.1.0"
   },
   "servers": [
-    { "url": "http://127.0.0.1:8787", "description": "yerel wrangler dev" }
+    { "url": "https://ak-1835-1903.tthacktt.workers.dev", "description": "canlı API" }
   ],
   "components": {
     "securitySchemes": {
       "botApiKey": {
         "type": "http",
         "scheme": "bearer",
-        "description": "`Authorization: Bearer <apiKey>` — `src/worker/yetki.ts:17-31`, `src/worker/kimlikDogrulama.ts`."
+        "description": "`Authorization: Bearer <apiKey>` (giriş sınavı akışı: SPEC §8)."
       }
     },
     "schemas": {
       "Hata": {
         "type": "object",
-        "description": "`src/worker/http.ts:8-10`",
         "required": ["hata"],
         "properties": {
           "hata": { "type": "string" }
@@ -27,15 +26,15 @@
       },
       "Specialization": {
         "type": "string",
-        "description": "`src/game/types.ts:5-9`",
+        "description": "Beyan edilebilir uzmanlık (en çok 2 per maç, SPEC §5).",
         "enum": ["haritaci", "dilbilimci", "profilci", "arabulucu"]
       },
       "PageTitle": {
         "type": "string",
-        "description": "`src/game/types.ts:1` — Wikipedia sayfa başlığı."
+        "description": "Wikipedia sayfa başlığı."
       },
       "KacakMove": {
-        "description": "`src/game/types.ts:37-40`",
+        "description": "Kaçak'ın tur hamlesi (SPEC §4).",
         "oneOf": [
           {
             "type": "object",
@@ -59,14 +58,14 @@
               "type": { "type": "string", "enum": ["uzmanlikAraci"] },
               "arac": { "$ref": "#/components/schemas/Specialization" },
               "params": {
-                "description": "Shape depends on `arac` and role (`src/game/tools.ts:81-122`): `haritaci`+Hunter needs `{ hedefSayfa: PageTitle }` (returns neighbor count within 2 hops); `haritaci`+Fugitive takes no params (returns own page's out-degree); `dilbilimci`+Hunter needs `{ hakemYanitlari: string[] }` (returns a word-frequency map); `dilbilimci`+Fugitive takes no params (returns top 5 distinctive words on own page); `profilci` takes no params either role (returns the opponent's declared specializations, plus a move/stay ratio for Hunter); `arabulucu` is not an independent query tool — calling it this way returns `400` (it instead passively grants +1 Referee message per turn, SPEC §5)."
+                "description": "Shape depends on `arac` and role: `haritaci`+Hunter needs `{ hedefSayfa: PageTitle }` (returns neighbor count within 2 hops); `haritaci`+Fugitive takes no params (returns own page's out-degree); `dilbilimci`+Hunter needs `{ hakemYanitlari: string[] }` (returns a word-frequency map); `dilbilimci`+Fugitive takes no params (returns top 5 distinctive words on own page); `profilci` takes no params either role (returns the opponent's declared specializations, plus a move/stay ratio for Hunter); `arabulucu` is not an independent query tool — calling it this way returns `400` (it instead passively grants +1 Referee message per turn, SPEC §5)."
               }
             }
           }
         ]
       },
       "AvciMove": {
-        "description": "`src/game/types.ts:42-47`",
+        "description": "Avcı'nın tur hamlesi (SPEC §4).",
         "oneOf": [
           {
             "type": "object",
@@ -81,7 +80,7 @@
             "required": ["type", "mesaj"],
             "properties": {
               "type": { "type": "string", "enum": ["sorHakeme"] },
-              "mesaj": { "type": "string" },
+              "mesaj": { "type": "string", "maxLength": 500, "description": "500 Unicode karakterini aşarsa 400 (SPEC §7c)." },
               "hakemId": { "type": "string", "description": "verilmezse sistem hakemine gider." }
             }
           },
@@ -92,7 +91,7 @@
               "type": { "type": "string", "enum": ["uzmanlikAraci"] },
               "arac": { "$ref": "#/components/schemas/Specialization" },
               "params": {
-                "description": "Shape depends on `arac` and role (`src/game/tools.ts:81-122`): `haritaci`+Hunter needs `{ hedefSayfa: PageTitle }` (returns neighbor count within 2 hops); `haritaci`+Fugitive takes no params (returns own page's out-degree); `dilbilimci`+Hunter needs `{ hakemYanitlari: string[] }` (returns a word-frequency map); `dilbilimci`+Fugitive takes no params (returns top 5 distinctive words on own page); `profilci` takes no params either role (returns the opponent's declared specializations, plus a move/stay ratio for Hunter); `arabulucu` is not an independent query tool — calling it this way returns `400` (it instead passively grants +1 Referee message per turn, SPEC §5)."
+                "description": "Shape depends on `arac` and role: `haritaci`+Hunter needs `{ hedefSayfa: PageTitle }` (returns neighbor count within 2 hops); `haritaci`+Fugitive takes no params (returns own page's out-degree); `dilbilimci`+Hunter needs `{ hakemYanitlari: string[] }` (returns a word-frequency map); `dilbilimci`+Fugitive takes no params (returns top 5 distinctive words on own page); `profilci` takes no params either role (returns the opponent's declared specializations, plus a move/stay ratio for Hunter); `arabulucu` is not an independent query tool — calling it this way returns `400` (it instead passively grants +1 Referee message per turn, SPEC §5)."
               }
             }
           },
@@ -107,28 +106,30 @@
       },
       "HakemMesajiGirdisi": {
         "type": "object",
-        "description": "Ek hakem mesajı kanalı gövde öğesi — yalnız Avcı rolü, SPEC §7a, `src/worker/rotalar/maclar.ts:175-179,198-236`.",
+        "description": "Ek hakem mesajı kanalı gövde öğesi — yalnız Avcı rolü, SPEC §7a.",
         "required": ["mesaj"],
         "properties": {
-          "mesaj": { "type": "string" },
+          "mesaj": { "type": "string", "maxLength": 500, "description": "500 Unicode karakterini aşarsa 400 (SPEC §7c)." },
           "hakemId": { "type": "string", "description": "verilmezse sistem hakemine gider." }
         }
       },
       "HakemYanitKaydi": {
         "type": "object",
-        "description": "`src/game/types.ts:73-93`",
+        "description": "Bir hakem yanıtı kaydı — bilgi dilimleri SPEC §6, metin sözleşmesi SPEC §7c.",
         "required": ["turn", "hakemId", "soru", "yanit"],
         "properties": {
           "turn": { "type": "integer" },
           "hakemId": { "type": "string" },
           "soru": { "type": "string" },
           "yanit": { "type": "string" },
-          "avciKonum": { "$ref": "#/components/schemas/PageTitle" }
+          "avciKonum": { "$ref": "#/components/schemas/PageTitle" },
+          "etiket": { "type": "string", "description": "`yanit`i saran o turun rastgele etiketi, düz değer (SPEC §7c). Sarılmamış/eski kayıtlarda boş dizge." },
+          "kesildi": { "type": "boolean", "description": "`yanit`in 500 Unicode karakter sınırını aştığı için kesildiği işareti (SPEC §7c). Kesilmediyse `false`/alan yok." }
         }
       },
       "KacakView": {
         "type": "object",
-        "description": "`src/game/views.ts:9-16,38-47` — GET view/move yanıtının `view` alanı (rol=kacak).",
+        "description": "GET view/move yanıtının `view` alanı (rol=kacak).",
         "required": ["kendiKonum", "komsular", "kendiUzmanliklari", "rakipUzmanliklari", "tur", "turSiniri", "durum"],
         "properties": {
           "kendiKonum": { "$ref": "#/components/schemas/PageTitle" },
@@ -142,7 +143,7 @@
       },
       "AvciView": {
         "type": "object",
-        "description": "`src/game/views.ts:18-33,52-67` — GET view/move yanıtının `view` alanı (rol=avci).",
+        "description": "GET view/move yanıtının `view` alanı (rol=avci).",
         "allOf": [
           { "$ref": "#/components/schemas/KacakView" },
           {
@@ -160,7 +161,7 @@
       },
       "SuzgecOlayi": {
         "type": "object",
-        "description": "`src/game/types.ts:63-70`",
+        "description": "Çıkış süzgecinin bir hakem yanıtından bloke ettiği gizli-değer olayı (SPEC §7b/§7c).",
         "required": ["turn", "hakemId", "sebep", "varyant"],
         "properties": {
           "turn": { "type": "integer" },
@@ -171,7 +172,7 @@
       },
       "TurnLogEntry": {
         "type": "object",
-        "description": "`src/game/types.ts:122-142` — GET /matches/{id}/record yanıtının `turns[]` öğesi.",
+        "description": "GET /matches/{id}/record yanıtının `turns[]` öğesi.",
         "required": ["turn", "kacakMove", "avciMove", "hakemMesajlari"],
         "properties": {
           "turn": { "type": "integer" },
@@ -223,7 +224,7 @@
     "/health": {
       "get": {
         "summary": "Sağlık kontrolü",
-        "description": "`src/worker/index.ts:28-30`. Kimlik doğrulama gerekmez.",
+        "description": "Kimlik doğrulama gerekmez.",
         "security": [],
         "responses": {
           "200": {
@@ -248,7 +249,7 @@
     "/bots": {
       "post": {
         "summary": "Bot kaydı",
-        "description": "`src/worker/index.ts:32-34`, işleyici `src/worker/rotalar/botlar.ts:11-34`. API anahtarı yalnız bu yanıtta, bir kez döner. Kimlik doğrulama gerekmez.",
+        "description": "API anahtarı yalnız bu yanıtta, bir kez döner. Kimlik doğrulama gerekmez.",
         "security": [],
         "requestBody": {
           "required": true,
@@ -258,8 +259,8 @@
                 "type": "object",
                 "required": ["name"],
                 "properties": {
-                  "name": { "type": "string", "minLength": 1 },
-                  "owner": { "type": "string" }
+                  "name": { "type": "string", "minLength": 1, "maxLength": 64, "description": "64 Unicode karakterini aşarsa 400 (`MAX_NAME_UZUNLUGU`)." },
+                  "owner": { "type": "string", "maxLength": 64, "description": "64 Unicode karakterini aşarsa 400 (`MAX_NAME_UZUNLUGU`)." }
                 }
               }
             }
@@ -267,7 +268,7 @@
         },
         "responses": {
           "201": {
-            "description": "Oluşturuldu",
+            "description": "Oluşturuldu. Kayıp/unutulan bir anahtarın kurtarma yolu YOKTUR — tek seçenek yeniden kayıt (`POST /bots`, yeni `botId`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -283,15 +284,47 @@
             }
           },
           "400": {
-            "description": "`name` eksik/boş ya da `owner` dizge değil.",
+            "description": "`name` eksik/boş/64 karakterden uzun ya da `owner` dizge değil/64 karakterden uzun.",
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } }
           },
           "413": {
-            "description": "İstek gövdesi `ISTEK_GOVDESI_BAYT_SINIRI`'yı (45056 bayt, `src/worker/http.ts`) aşıyor — JSON hiç ayrıştırılmaz.",
+            "description": "İstek gövdesi `ISTEK_GOVDESI_BAYT_SINIRI`'yı (45056 bayt) aşıyor — JSON hiç ayrıştırılmaz.",
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } }
           },
           "429": {
-            "description": "Günlük bot kayıt tavanı doldu (`GUNLUK_BOT_KAYIT_TAVANI`, `src/worker/botKayitTavani.ts`). `Retry-After` başlığı UTC gün sonuna kadar kalan saniyeyi verir.",
+            "description": "Günlük bot kayıt tavanı doldu (`GUNLUK_BOT_KAYIT_TAVANI`). `Retry-After` başlığı UTC gün sonuna kadar kalan saniyeyi verir.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } }
+          }
+        }
+      }
+    },
+    "/bots/me/rotate-key": {
+      "post": {
+        "summary": "API anahtarını yenile",
+        "description": "Mevcut (geçerli, devre dışı olmayan) anahtarla yetkilendirilir; yeni bir anahtar bir kez döner, eskisi ANINDA geçersiz olur. Sınav geçme şartı yok. Kayıp/unutulan bir anahtarın kurtarma yolu YOKTUR — eski anahtar bilinmeden bu uç nokta da çağrılamaz; tek seçenek yeniden kayıt (`POST /bots`, yeni `botId`).",
+        "security": [{ "botApiKey": [] }],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["apiKey", "not"],
+                  "properties": {
+                    "apiKey": { "type": "string" },
+                    "not": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authorization başlığı eksik veya geçersiz API anahtarı.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } }
+          },
+          "403": {
+            "description": "Bot devre dışı bırakıldı.",
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } }
           }
         }
@@ -300,7 +333,7 @@
     "/exam": {
       "get": {
         "summary": "Giriş sınavı sorularını getir",
-        "description": "`src/worker/index.ts:36-38`, işleyici `src/worker/rotalar/sinav.ts:7-13`. Cevapsız sorular döner (SPEC §8).",
+        "description": "Cevapsız sorular döner (SPEC §8).",
         "security": [{ "botApiKey": [] }],
         "responses": {
           "200": {
@@ -330,12 +363,16 @@
           "401": {
             "description": "Authorization başlığı eksik veya geçersiz API anahtarı.",
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } }
+          },
+          "403": {
+            "description": "Bot devre dışı bırakıldı.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } }
           }
         }
       },
       "post": {
         "summary": "Giriş sınavını değerlendir",
-        "description": "`src/worker/index.ts:39-41`, işleyici `src/worker/rotalar/sinav.ts:20-48`. Tümü doğruysa bot anahtarı etkinleştirilir (`examPassed`).",
+        "description": "Tümü doğruysa bot anahtarı etkinleştirilir (`examPassed`, SPEC §8).",
         "security": [{ "botApiKey": [] }],
         "requestBody": {
           "required": true,
@@ -388,8 +425,12 @@
             "description": "Authorization başlığı eksik veya geçersiz API anahtarı.",
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } }
           },
+          "403": {
+            "description": "Bot devre dışı bırakıldı.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } }
+          },
           "413": {
-            "description": "İstek gövdesi `ISTEK_GOVDESI_BAYT_SINIRI`'yı (45056 bayt, `src/worker/http.ts`) aşıyor — JSON hiç ayrıştırılmaz.",
+            "description": "İstek gövdesi `ISTEK_GOVDESI_BAYT_SINIRI`'yı (45056 bayt) aşıyor — JSON hiç ayrıştırılmaz.",
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } }
           }
         }
@@ -398,7 +439,7 @@
     "/matches": {
       "post": {
         "summary": "Yeni maç oluştur",
-        "description": "`src/worker/index.ts:43-45`, işleyici `src/worker/rotalar/maclar.ts:54-128`. Diğer rol daima platform botudur (Kindi ya da platform Kaçak botu). Sınavı geçmemiş bot `403` alır.",
+        "description": "Diğer rol daima platform botudur (Kindi ya da platform Kaçak botu, SPEC §4). Sınavı geçmemiş bot `403` alır (SPEC §8).",
         "security": [{ "botApiKey": [] }],
         "requestBody": {
           "required": true,
@@ -412,7 +453,7 @@
                   "uzmanlik": {
                     "type": "array",
                     "items": { "$ref": "#/components/schemas/Specialization" },
-                    "description": "En fazla 2 (`MAX_SPECIALIZATIONS`, `src/game/types.ts:18`)."
+                    "description": "En fazla 2 (`MAX_SPECIALIZATIONS`, SPEC §5)."
                   },
                   "turnLimit": { "type": "integer", "minimum": 1, "maximum": 30, "description": "Varsayılan ve en fazla `DEFAULT_TURN_LIMIT` (SPEC §7: v0.1'de 30)." }
                 }
@@ -452,11 +493,11 @@
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } }
           },
           "403": {
-            "description": "Önce /exam sınavını geçin.",
+            "description": "Önce /exam sınavını geçin, ya da bot devre dışı bırakıldı.",
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } }
           },
           "413": {
-            "description": "İstek gövdesi `ISTEK_GOVDESI_BAYT_SINIRI`'yı (45056 bayt, `src/worker/http.ts`) aşıyor — JSON hiç ayrıştırılmaz.",
+            "description": "İstek gövdesi `ISTEK_GOVDESI_BAYT_SINIRI`'yı (45056 bayt) aşıyor — JSON hiç ayrıştırılmaz.",
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } }
           },
           "429": {
@@ -473,7 +514,7 @@
     "/matches/{matchId}/view": {
       "get": {
         "summary": "Rolün kendi görünümü",
-        "description": "`src/worker/index.ts:47-53` (yönlendirme deseni `MAC_YOLU`, satır 20), işleyici `src/worker/rotalar/maclar.ts:161-173`. Karşı rolün konumu asla dönmez (bkz. SPEC §4, sızıntı testi `test/leak.test.ts`).",
+        "description": "Karşı rolün konumu asla dönmez (bkz. SPEC §4).",
         "security": [{ "botApiKey": [] }],
         "parameters": [
           { "name": "matchId", "in": "path", "required": true, "schema": { "type": "string" } }
@@ -502,7 +543,7 @@
             }
           },
           "401": { "description": "Authorization başlığı eksik veya geçersiz API anahtarı.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } },
-          "403": { "description": "Önce sınav geçilmeli veya bu maça erişim yok.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } },
+          "403": { "description": "Önce sınav geçilmeli, bot devre dışı bırakıldı, veya bu maça erişim yok.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } },
           "404": { "description": "Maç bulunamadı.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } }
         }
       }
@@ -510,7 +551,7 @@
     "/matches/{matchId}/move": {
       "post": {
         "summary": "Tek hamle oyna",
-        "description": "`src/worker/index.ts:47-53`, işleyici `src/worker/rotalar/maclar.ts:244-455`. Diğer rolün hamlesi sunucu içinde platform botu tarafından hesaplanır; bir çağrı bir turu bitirir. `hakemMesajlari` yalnız Avcı rolü için geçerlidir (SPEC §7a).",
+        "description": "Diğer rolün hamlesi sunucu içinde platform botu tarafından hesaplanır; bir çağrı bir turu bitirir. `hakemMesajlari` yalnız Avcı rolü için geçerlidir (SPEC §7a).",
         "security": [{ "botApiKey": [] }],
         "parameters": [
           { "name": "matchId", "in": "path", "required": true, "schema": { "type": "string" } }
@@ -533,7 +574,7 @@
                     "type": "array",
                     "items": { "$ref": "#/components/schemas/HakemMesajiGirdisi" },
                     "maxItems": 10,
-                    "description": "Yalnız Avcı rolü; kota aşımı veya Kaçak rolünde gönderim 400 ile reddedilir (sessizce kırpılmaz). En fazla 10 öğe (`MAX_PANEL`, `src/game/hakemPanel.ts`) — aşımda 400, kota kontrolünden ve döngüden ÖNCE."
+                    "description": "Yalnız Avcı rolü; kota aşımı veya Kaçak rolünde gönderim 400 ile reddedilir (sessizce kırpılmaz). En fazla 10 öğe (`MAX_PANEL`) — aşımda 400, kota kontrolünden ve döngüden ÖNCE."
                   }
                 }
               }
@@ -558,8 +599,8 @@
                         { "$ref": "#/components/schemas/AvciView" }
                       ]
                     },
-                    "toolSonucu": { "description": "Only present if this move was a successful `uzmanlikAraci` call; shape depends on `arac`/role, see `AvciMove`/`KacakMove`'s `params` description (`src/game/tools.ts:81-122`) for the exact per-tool `sonuc` shape — e.g. `haritaci` (Hunter) returns a plain `number`, `dilbilimci` (Hunter) returns a `Record<string, number>` word-frequency map." },
-                    "rejected": { "type": "string", "description": "Your own role's rejection reason for this turn, if any (`src/worker/rotalar/maclar.ts:437,445,453`). Note an undeclared-specialization `uzmanlikAraci` move never reaches a `200` at all — it's short-circuited to `403`/`400` before this field would be set (`src/worker/rotalar/maclar.ts:438-440`). What CAN appear here in an otherwise-successful `200`: soft Referee-channel failures that don't fail the move itself, e.g. the real-model bridge not finding a precomputed answer in time, or the per-match model-call limit being exceeded for that turn." }
+                    "toolSonucu": { "description": "Only present if this move was a successful `uzmanlikAraci` call; shape depends on `arac`/role, see `AvciMove`/`KacakMove`'s `params` description for the exact per-tool `sonuc` shape — e.g. `haritaci` (Hunter) returns a plain `number`, `dilbilimci` (Hunter) returns a `Record<string, number>` word-frequency map." },
+                    "rejected": { "type": "string", "description": "Your own role's rejection reason for this turn, if any. Note an undeclared-specialization `uzmanlikAraci` move never reaches a `200` at all — it's short-circuited to `403`/`400` before this field would be set. What CAN appear here in an otherwise-successful `200`: soft Referee-channel failures that don't fail the move itself, e.g. the real-model bridge not finding a precomputed answer in time, or the per-match model-call limit being exceeded for that turn." }
                   }
                 }
               }
@@ -567,17 +608,17 @@
           },
           "400": { "description": "Geçersiz `move`/`hakemMesajlari`, geçersiz hamle tipi, veya `hakemMesajlari` 10 öğeden fazla.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } },
           "401": { "description": "Authorization başlığı eksik veya geçersiz API anahtarı.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } },
-          "403": { "description": "Sınav geçilmedi, bu maça erişim yok, veya beyan edilmemiş uzmanlık aracı.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } },
+          "403": { "description": "Sınav geçilmedi, bot devre dışı bırakıldı, bu maça erişim yok, veya beyan edilmemiş uzmanlık aracı.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } },
           "404": { "description": "Maç bulunamadı.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } },
-          "409": { "description": "Maç zaten bitti.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } },
-          "413": { "description": "İstek gövdesi `ISTEK_GOVDESI_BAYT_SINIRI`'yı (45056 bayt, `src/worker/http.ts`) aşıyor — JSON hiç ayrıştırılmaz.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } }
+          "409": { "description": "Maç zaten bitti, YA DA bu maç için başka bir move şu an sürüyor (30 saniyelik D1 kilidi) — kısa bir süre sonra tekrar deneyin veya `/view` okuyun.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } },
+          "413": { "description": "İstek gövdesi `ISTEK_GOVDESI_BAYT_SINIRI`'yı (45056 bayt) aşıyor — JSON hiç ayrıştırılmaz.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } }
         }
       }
     },
     "/matches/{matchId}/record": {
       "get": {
         "summary": "Tam maç kaydı",
-        "description": "`src/worker/index.ts:47-53`, işleyici `src/worker/rotalar/maclar.ts:458-481`. Yalnız maç bitince ve yalnız katılımcılara (SPEC §9); 30 gün sonra anonimleştirilip kamuya açık yayımlanır.",
+        "description": "Yalnız maç bitince ve yalnız katılımcılara (SPEC §9); şimdilik yalnızca katılımcılara açık, anonimleştirilmiş kamuya açık yayın planlanıyor, henüz uygulanmadı.",
         "security": [{ "botApiKey": [] }],
         "parameters": [
           { "name": "matchId", "in": "path", "required": true, "schema": { "type": "string" } }
@@ -604,7 +645,7 @@
             }
           },
           "401": { "description": "Authorization başlığı eksik veya geçersiz API anahtarı.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } },
-          "403": { "description": "Sınav geçilmedi veya bu maça erişim yok.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } },
+          "403": { "description": "Sınav geçilmedi, bot devre dışı bırakıldı, veya bu maça erişim yok.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } },
           "404": { "description": "Maç bulunamadı.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } },
           "409": { "description": "Maç henüz bitmedi.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } }
         }
