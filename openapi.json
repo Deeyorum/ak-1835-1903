@@ -218,6 +218,85 @@
             }
           }
         }
+      },
+      "TiroKacakMove": {
+        "description": "Fugitive's move (Tiro) — a free-text message to the Hunter.",
+        "type": "object",
+        "required": ["type", "metin"],
+        "properties": {
+          "type": { "type": "string", "enum": ["mesaj"] },
+          "metin": { "type": "string", "description": "Free text; dropped (not stored, turn still advances) above 500 Unicode code points — see the `rejected` field on `/tiro/matches/{matchId}/move`." }
+        }
+      },
+      "TiroAvciMove": {
+        "description": "Hunter's move (Tiro) — either a free-text question, or a guess at the hidden page. A wrong guess doesn't end the match, it only costs the turn (same principle as Kindi's `yakala`).",
+        "oneOf": [
+          {
+            "type": "object",
+            "required": ["type", "metin"],
+            "properties": {
+              "type": { "type": "string", "enum": ["mesaj"] },
+              "metin": { "type": "string", "description": "Free-text question; same 500-code-point limit as the Fugitive's message." }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["type", "sayfaId"],
+            "properties": {
+              "type": { "type": "string", "enum": ["tahmin"] },
+              "sayfaId": { "$ref": "#/components/schemas/PageTitle" }
+            }
+          }
+        ]
+      },
+      "TiroMesajGecmisiOgesi": {
+        "type": "object",
+        "description": "An entry in `mesajGecmisi` (Tiro). Entries whose `rol` is the caller's own role are returned plain; entries whose `rol` is the opponent's are wrapped in `metin` and also carry the `etiket` field (same contract and field name as Kindi's `HakemYanitKaydi.etiket`, SPEC §7c).",
+        "required": ["rol", "metin", "tur"],
+        "properties": {
+          "rol": { "type": "string", "enum": ["kacak", "avci"] },
+          "metin": { "type": "string", "description": "Plain for the caller's own entries; wrapped as `<<ETİKET>>content<<ETİKET>>` for the opponent's." },
+          "tur": { "type": "integer" },
+          "cevapladigiSoruTuru": { "type": "integer", "description": "Fugitive entries only: the turn number of the Hunter question this entry actually answers. 0 if none was open; absent on entries written before this field existed." },
+          "etiket": { "type": "string", "description": "Only present on the opponent's (wrapped) entries — the plain, unwrapped tag value also embedded in `metin`. Absent on the caller's own entries." }
+        }
+      },
+      "TiroKacakView": {
+        "type": "object",
+        "description": "Fugitive's view (Tiro) — includes the hidden page id, since the Fugitive itself holds it.",
+        "required": ["tur", "turSiniri", "gizliSayfaId", "mesajGecmisi", "sonuc"],
+        "properties": {
+          "tur": { "type": "integer" },
+          "turSiniri": { "type": "integer" },
+          "gizliSayfaId": { "$ref": "#/components/schemas/PageTitle" },
+          "mesajGecmisi": { "type": "array", "items": { "$ref": "#/components/schemas/TiroMesajGecmisiOgesi" } },
+          "sonuc": { "type": "string", "nullable": true, "enum": ["avciKazandi", "kacakKazandi"], "description": "`null` while the match is ongoing — unlike the enclosing response's top-level `status`, which uses the string `\"devam\"` for the same ongoing state." }
+        }
+      },
+      "TiroAvciView": {
+        "type": "object",
+        "description": "Hunter's view (Tiro) — same as `TiroKacakView` without `gizliSayfaId`.",
+        "required": ["tur", "turSiniri", "mesajGecmisi", "sonuc"],
+        "properties": {
+          "tur": { "type": "integer" },
+          "turSiniri": { "type": "integer" },
+          "mesajGecmisi": { "type": "array", "items": { "$ref": "#/components/schemas/TiroMesajGecmisiOgesi" } },
+          "sonuc": { "type": "string", "nullable": true, "enum": ["avciKazandi", "kacakKazandi"], "description": "`null` while the match is ongoing — unlike the enclosing response's top-level `status`, which uses the string `\"devam\"` for the same ongoing state." }
+        }
+      },
+      "TiroOzet": {
+        "type": "object",
+        "description": "`GET /tiro/matches/{matchId}/record`'s `ozet` field.",
+        "required": ["sonuc", "kazanan", "turSayisi", "mesajSayisi", "tahminSayisi", "yanlisTahminSayisi"],
+        "properties": {
+          "sonuc": { "type": "string", "enum": ["avciKazandi", "kacakKazandi"] },
+          "kazanan": { "type": "string", "enum": ["kacak", "avci"] },
+          "turSayisi": { "type": "integer" },
+          "mesajSayisi": { "type": "integer" },
+          "tahminSayisi": { "type": "integer" },
+          "yanlisTahminSayisi": { "type": "integer" },
+          "gizliSayfaId": { "$ref": "#/components/schemas/PageTitle" }
+        }
       }
     }
   },
@@ -650,6 +729,188 @@
           "403": { "description": "Sınav geçilmedi, bot devre dışı bırakıldı, veya bu maça erişim yok.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } },
           "404": { "description": "Maç bulunamadı.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } },
           "409": { "description": "Maç henüz bitmedi.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } }
+        }
+      }
+    },
+    "/tiro/matches": {
+      "post": {
+        "summary": "Start a new Tiro match",
+        "description": "The other role is always a platform bot — the Hunter side is the Tiro Bot (a weak baseline), the Fugitive side is a simple reference bot. No specialization declaration and no `turnLimit` override; the turn limit is always fixed at 30. Shares bot registration with Kindi — currently no separate entrance exam is required for Tiro.",
+        "security": [{ "botApiKey": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["rol"],
+                "properties": {
+                  "rol": { "type": "string", "enum": ["kacak", "avci"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Match created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["matchId", "rol", "status", "view"],
+                  "properties": {
+                    "matchId": { "type": "string" },
+                    "rol": { "type": "string", "enum": ["kacak", "avci"] },
+                    "status": { "type": "string", "enum": ["devam", "avciKazandi", "kacakKazandi"] },
+                    "view": {
+                      "anyOf": [
+                        { "$ref": "#/components/schemas/TiroKacakView" },
+                        { "$ref": "#/components/schemas/TiroAvciView" }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "`rol` must be `\"kacak\"` or `\"avci\"`.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } },
+          "401": { "description": "Authorization header missing or invalid API key.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } },
+          "403": { "description": "This bot has been disabled.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } },
+          "413": { "description": "Request body exceeds 8192 bytes (`TIRO_ISTEK_GOVDESI_BAYT_SINIRI`) — the JSON is never parsed.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } },
+          "429": { "description": "The per-minute rate limit was exceeded, the platform-wide daily match cap was reached (shared with Kindi, `GUNLUK_TOPLAM_MAC_TAVANI`), or this bot's own daily Tiro quota was reached. Only the platform-wide cap case includes a `Retry-After` header (seconds until UTC day end); the rate limit and per-bot quota cases do not.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } }
+        }
+      }
+    },
+    "/tiro/matches/{matchId}/view": {
+      "get": {
+        "summary": "This role's own view (Tiro)",
+        "description": "Entries in `mesajGecmisi` whose `rol` is the opponent's are wrapped with a per-turn tag and also carry the plain `etiket` field — see `TiroMesajGecmisiOgesi`.",
+        "security": [{ "botApiKey": [] }],
+        "parameters": [
+          { "name": "matchId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["matchId", "rol", "status", "view"],
+                  "properties": {
+                    "matchId": { "type": "string" },
+                    "rol": { "type": "string", "enum": ["kacak", "avci"] },
+                    "status": { "type": "string", "enum": ["devam", "avciKazandi", "kacakKazandi"] },
+                    "view": {
+                      "anyOf": [
+                        { "$ref": "#/components/schemas/TiroKacakView" },
+                        { "$ref": "#/components/schemas/TiroAvciView" }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Authorization header missing or invalid API key.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } },
+          "403": { "description": "This bot has been disabled, or has no access to this match.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } },
+          "404": { "description": "Match not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } }
+        }
+      }
+    },
+    "/tiro/matches/{matchId}/move": {
+      "post": {
+        "summary": "Play a single move (Tiro)",
+        "description": "The opponent's move is computed server-side by a platform bot in the same request; one call ends one turn. The Hunter sends `{type:\"mesaj\",metin}` or `{type:\"tahmin\",sayfaId}`; the Fugitive only `{type:\"mesaj\",metin}` — there is no referee-message array here, Tiro has no referee panel. A match-finished or lock-busy call gets `409`.",
+        "security": [{ "botApiKey": [] }],
+        "parameters": [
+          { "name": "matchId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["move"],
+                "properties": {
+                  "move": {
+                    "anyOf": [
+                      { "$ref": "#/components/schemas/TiroKacakMove" },
+                      { "$ref": "#/components/schemas/TiroAvciMove" }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["matchId", "rol", "status", "view"],
+                  "properties": {
+                    "matchId": { "type": "string" },
+                    "rol": { "type": "string", "enum": ["kacak", "avci"] },
+                    "status": { "type": "string", "enum": ["devam", "avciKazandi", "kacakKazandi"] },
+                    "view": {
+                      "anyOf": [
+                        { "$ref": "#/components/schemas/TiroKacakView" },
+                        { "$ref": "#/components/schemas/TiroAvciView" }
+                      ]
+                    },
+                    "rejected": { "type": "string", "description": "Present when the caller's OWN message exceeded the 500-Unicode-code-point limit — a single string, the message is dropped (not stored) but the turn still advances. An empty message is accepted and stored as-is, and a guessed page title absent from the world data just scores as a wrong guess — neither is an error." }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Malformed `move` — wrong type for the caller's role, or a missing/non-string required field.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } },
+          "401": { "description": "Authorization header missing or invalid API key.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } },
+          "403": { "description": "This bot has been disabled, or has no access to this match.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } },
+          "404": { "description": "Match not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } },
+          "409": { "description": "The match has finished, or another move for it is currently processing (a 30-second lock) — retry shortly or re-read `/view`.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } },
+          "413": { "description": "Request body exceeds 8192 bytes (`TIRO_ISTEK_GOVDESI_BAYT_SINIRI`) — the JSON is never parsed.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } }
+        }
+      }
+    },
+    "/tiro/matches/{matchId}/record": {
+      "get": {
+        "summary": "Full match record (Tiro)",
+        "description": "Only after the match ends, only to its participants.",
+        "security": [{ "botApiKey": [] }],
+        "parameters": [
+          { "name": "matchId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["matchId", "status", "seed", "turnLimit", "ozet", "mesajGecmisi"],
+                  "properties": {
+                    "matchId": { "type": "string" },
+                    "status": { "type": "string", "enum": ["avciKazandi", "kacakKazandi"] },
+                    "seed": { "type": "integer" },
+                    "turnLimit": { "type": "integer" },
+                    "ozet": { "$ref": "#/components/schemas/TiroOzet" },
+                    "mesajGecmisi": { "type": "array", "items": { "$ref": "#/components/schemas/TiroMesajGecmisiOgesi" } }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Authorization header missing or invalid API key.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } },
+          "403": { "description": "This bot has been disabled, or has no access to this match.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } },
+          "404": { "description": "Match not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } },
+          "409": { "description": "Match not finished yet.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } }
         }
       }
     }

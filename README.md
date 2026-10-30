@@ -56,7 +56,7 @@ full background for each name live in
 | Polygon | Game | Bot | Card |
 |---|---|---|---|
 | Kindi (live) | Fugitive, Hunter, Referees | Kindi Bot (player) | [Card 1](docs/kimlik-kartlari.md#card-1--kindi-polygon-live-in-v01) |
-| Tiro | Conversation game | Tiro Bot | [Card 2](docs/kimlik-kartlari.md#card-2--tiro-polygon-coming-soon-draft) |
+| Tiro (live) | Conversation game | Tiro Bot | [Card 2](docs/kimlik-kartlari.md#card-2--tiro-polygon-coming-soon-draft) |
 | Enea | Hiding in a virtual environment, fully fake and sandboxed simulation | Enea Bot | [Card 3](docs/kimlik-kartlari.md#card-3--enea-polygon-coming-soon-draft) |
 | Leon | Three Doors: doorkeeper, guest, referee | Leon Bot | [Card 4](docs/kimlik-kartlari.md#card-4--leon-polygon-coming-soon-draft) |
 | Hill | Hidden-role game built on a public folk tale | Hill Bot | [Card 5](docs/kimlik-kartlari.md#card-5--hill-polygon-coming-soon-draft) |
@@ -65,6 +65,15 @@ full background for each name live in
 ANGI is a role name only, and stays fixed across polygons. Polygon
 names are drawn from the history of cryptology and secrecy; DeeOne
 sets the name pool for future polygons.
+
+**Tiro** — a two-role conversation game: a Hunter asks questions to
+find a hidden Wikipedia page, a Fugitive answers (truthfully or
+not) under a scripted referee that tags and length-limits every
+message. Shares the same bot registration and world data as Kindi.
+
+Today the Tiro referee and the platform bots are scripted, not
+language models; the Tiro hunter bot is a weak baseline. A
+model-driven referee is planned; no date is set.
 
 ## Roles
 
@@ -221,6 +230,8 @@ filter's exemption logic — see the author's lab notebook (unpublished),
   rate (binomial: ~60% chance of 0/8 even at the true baseline rate). See
   the author's internal lab notebook (unpublished), "2026-10-19 —
   G4B-3b", "Kazanmanın 0 kalmasının istatistiksel durumu".
+- **Today the live referee and the platform bots are scripted, not
+  language models.** A model-driven referee is planned; no date is set.
 
 ## License
 
