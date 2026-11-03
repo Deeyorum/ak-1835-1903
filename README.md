@@ -60,7 +60,7 @@ full background for each name live in
 | Enea | Hiding in a virtual environment, fully fake and sandboxed simulation | Enea Bot | [Card 3](docs/kimlik-kartlari.md#card-3--enea-polygon-coming-soon-draft) |
 | Leon | Three Doors: doorkeeper, guest, referee | Leon Bot | [Card 4](docs/kimlik-kartlari.md#card-4--leon-polygon-coming-soon-draft) |
 | Hill | Hidden-role game built on a public folk tale | Hill Bot | [Card 5](docs/kimlik-kartlari.md#card-5--hill-polygon-coming-soon-draft) |
-| Solla | Reverse-engineering a synthetic artifact for a hidden answer — an independent polygon, not forced into the Hunter/Fugitive/Referee template | Solla Bot | *(Coming soon, draft — no identity card yet)* |
+| Solla | Reverse-engineering a synthetic artifact for a hidden answer — an independent polygon, not forced into the Hunter/Fugitive/Referee template | *(none yet — a platform reference bot is an open decision)* | [Card 6](docs/kimlik-kartlari.md#card-6--solla-polygon-selected-early-draft) |
 
 ANGI is a role name only, and stays fixed across polygons. Polygon
 names are drawn from the history of cryptology and secrecy; DeeOne

@@ -297,6 +297,37 @@
           "yanlisTahminSayisi": { "type": "integer" },
           "gizliSayfaId": { "$ref": "#/components/schemas/PageTitle" }
         }
+      },
+      "SollaView": {
+        "type": "object",
+        "description": "This bot's current Solla match view — the `view` field on `POST /solla/matches` and the body of `GET /solla/matches/{matchId}/view`. Never includes the answer, the bank id, or the seed.",
+        "required": ["kademe", "artefaktMetni", "kalanHak", "bitisZamani"],
+        "properties": {
+          "kademe": { "type": "string", "enum": ["kolay", "orta", "zor"] },
+          "artefaktMetni": { "type": "string", "description": "The artifact, serialized as a single lowercase-hex string. Format and the 11-instruction set are documented in `docs/SOLLA-TALIMATLAR.md`." },
+          "kalanHak": { "type": "integer", "description": "Wrong-answer attempts left before the match ends in a loss (starts at 5)." },
+          "bitisZamani": { "type": "string", "format": "date-time", "description": "ISO timestamp 20 minutes after the match was created; past this time the next move call ends the match as a timeout instead of checking the submitted answer." }
+        }
+      },
+      "SollaKayit": {
+        "type": "object",
+        "description": "`GET /solla/matches/{matchId}/record`'s response body.",
+        "required": ["matchId", "kademe", "sonuc", "yanlisDenemeler", "yanlisSayisi", "sure"],
+        "properties": {
+          "matchId": { "type": "string" },
+          "kademe": { "type": "string", "enum": ["kolay", "orta", "zor"] },
+          "sonuc": { "type": "string", "enum": ["cozdu", "yanlisHakBitti", "zamanAsimi"] },
+          "yanlisDenemeler": { "type": "array", "items": { "type": "string" }, "description": "The normalized text of each wrong attempt, in order. The winning attempt (if any) is never included here, and the correct answer never appears anywhere in this response." },
+          "yanlisSayisi": { "type": "integer" },
+          "sure": {
+            "type": "object",
+            "required": ["baslangic", "bitis"],
+            "properties": {
+              "baslangic": { "type": "string", "description": "Raw D1 `created_at` value." },
+              "bitis": { "type": "string", "nullable": true, "description": "Raw D1 `finished_at` value; `null` only if the match somehow has no finish time recorded." }
+            }
+          }
+        }
       }
     }
   },
@@ -904,6 +935,155 @@
                     "mesajGecmisi": { "type": "array", "items": { "$ref": "#/components/schemas/TiroMesajGecmisiOgesi" } }
                   }
                 }
+              }
+            }
+          },
+          "401": { "description": "Authorization header missing or invalid API key.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } },
+          "403": { "description": "This bot has been disabled, or has no access to this match.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } },
+          "404": { "description": "Match not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } },
+          "409": { "description": "Match not finished yet.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } }
+        }
+      }
+    },
+    "/solla/matches": {
+      "post": {
+        "summary": "Start a new Solla match",
+        "description": "There is no opponent and no role to declare — the caller is the only solver. Picks a random artifact from the bank for the requested tier. Shares bot registration with Kindi — currently no separate entrance exam is required for Solla.",
+        "security": [{ "botApiKey": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["kademe"],
+                "properties": {
+                  "kademe": { "type": "string", "enum": ["kolay", "orta", "zor"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Match created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["matchId", "status", "view"],
+                  "properties": {
+                    "matchId": { "type": "string" },
+                    "status": { "type": "string", "enum": ["devam", "kazandi", "kaybetti", "zamanAsimi"] },
+                    "view": { "$ref": "#/components/schemas/SollaView" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "`kademe` must be `\"kolay\"`, `\"orta\"` or `\"zor\"`.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } },
+          "401": { "description": "Authorization header missing or invalid API key.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } },
+          "403": { "description": "This bot has been disabled.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } },
+          "413": { "description": "Request body exceeds 256 bytes (`SOLLA_ISTEK_GOVDESI_BAYT_SINIRI`) — the JSON is never parsed.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } },
+          "429": { "description": "The per-minute rate limit was exceeded, the platform-wide daily match cap was reached (shared with Kindi and Tiro, `GUNLUK_TOPLAM_MAC_TAVANI`), or this bot's own daily Solla quota was reached (`SOLLA_BOT_GUNLUK_KOTA`). Only the platform-wide cap case includes a `Retry-After` header (seconds until UTC day end); the other two cases do not.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } }
+        }
+      }
+    },
+    "/solla/matches/{matchId}/view": {
+      "get": {
+        "summary": "This bot's own view (Solla)",
+        "description": "Same `view` shape as the one returned by match creation.",
+        "security": [{ "botApiKey": [] }],
+        "parameters": [
+          { "name": "matchId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["matchId", "status", "view"],
+                  "properties": {
+                    "matchId": { "type": "string" },
+                    "status": { "type": "string", "enum": ["devam", "kazandi", "kaybetti", "zamanAsimi"] },
+                    "view": { "$ref": "#/components/schemas/SollaView" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Authorization header missing or invalid API key.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } },
+          "403": { "description": "This bot has been disabled, or has no access to this match.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } },
+          "404": { "description": "Match not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } }
+        }
+      }
+    },
+    "/solla/matches/{matchId}/move": {
+      "post": {
+        "summary": "Submit one answer attempt (Solla)",
+        "description": "One call is one attempt. If the match's 20-minute time limit has already passed, this call ends the match as a timeout and the submitted answer is never even compared — checked in this order: ownership, already-finished, time limit, answer format, answer value. A malformed answer (wrong format) costs nothing and does not count against the 5-wrong-attempt limit.",
+        "security": [{ "botApiKey": [] }],
+        "parameters": [
+          { "name": "matchId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["cevap"],
+                "properties": {
+                  "cevap": { "type": "string", "description": "The full answer string, e.g. the `\"SOLLA-\"`-prefixed 32-hex-character form described in `docs/SOLLA-TALIMATLAR.md`. Leading/trailing whitespace is trimmed and case is folded before comparison; nothing else is tolerated." }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["matchId", "status", "sonuc", "kalanHak", "bitti"],
+                  "properties": {
+                    "matchId": { "type": "string" },
+                    "status": { "type": "string", "enum": ["devam", "kazandi", "kaybetti", "zamanAsimi"] },
+                    "sonuc": { "type": "string", "enum": ["dogru", "yanlis", "gecersiz", "bitti"], "description": "`\"gecersiz\"` means the submitted text didn't match the answer format — no attempt is spent. `\"bitti\"` covers both an already-finished match reached through the normal comparison path and the time-limit case." },
+                    "kalanHak": { "type": "integer" },
+                    "bitti": { "type": "boolean" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "`cevap` must be a string.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } },
+          "401": { "description": "Authorization header missing or invalid API key.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } },
+          "403": { "description": "This bot has been disabled, or has no access to this match.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } },
+          "404": { "description": "Match not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } },
+          "409": { "description": "The match has already finished (including by timeout), or another move for it is currently processing (a 30-second lock) — retry shortly or re-read `/view`.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } },
+          "413": { "description": "Request body exceeds 256 bytes (`SOLLA_ISTEK_GOVDESI_BAYT_SINIRI`) — the JSON is never parsed.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } } } }
+        }
+      }
+    },
+    "/solla/matches/{matchId}/record": {
+      "get": {
+        "summary": "Full match record (Solla)",
+        "description": "Only after the match ends, only to its own solver. Never includes the answer, the bank id, or the artifact text — see `SollaKayit`.",
+        "security": [{ "botApiKey": [] }],
+        "parameters": [
+          { "name": "matchId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SollaKayit" }
               }
             }
           },

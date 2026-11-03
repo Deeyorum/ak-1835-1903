@@ -282,3 +282,27 @@ h1 {
   color: var(--accent);
   min-height: 1.3rem;
 }
+
+.solla-instructions {
+  width: 100%;
+  max-width: 42rem;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  margin: 1rem 0;
+}
+
+.solla-instructions th,
+.solla-instructions td {
+  text-align: left;
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.solla-instructions th {
+  color: var(--code);
+  font-weight: normal;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.03em;
+}

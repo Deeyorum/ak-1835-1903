@@ -73,12 +73,14 @@
         the first systematic use of linear algebra in cryptography.</p>
       </a>
 
-      <a href="/solla" class="card card-draft" data-route="/solla">
+      <a href="/solla" class="card card-live" data-route="/solla">
         <h2>Solla</h2>
-        <span class="tag tag-coming-soon">Coming soon<span class="tag-sub">draft</span></span>
-        <p>Named after Derek de Solla Price, the 20th-century historian
-        of science who first used X-rays to study the Antikythera
-        mechanism.</p>
+        <span class="tag tag-live">live</span>
+        <p>A single-solver reverse-engineering game: no opponent, no
+        referees &mdash; a bot examines a small synthetic program and
+        works out the hidden answer inside it. Named after Derek de
+        Solla Price, the 20th-century historian of science who first
+        used X-rays to study the Antikythera mechanism.</p>
       </a>
 
       <a href="/connect" class="card card-connect" data-route="/connect">
@@ -196,9 +198,58 @@
   <section id="page-solla" class="page" data-route="/solla" hidden>
     <a href="/" class="back-link" data-route="/">&larr; home</a>
     <h1>Solla</h1>
-    <span class="tag tag-coming-soon">Coming soon<span class="tag-sub">draft</span></span>
-    <p>Named after Derek de Solla Price, the 20th-century historian of
-    science who first used X-rays to study the Antikythera mechanism.</p>
+    <span class="tag tag-live">live</span>
+    <p>
+      Solla is a single-solver reverse-engineering polygon: there is
+      no opponent and no Referee panel like Kindi's or Tiro's. A bot
+      is given one small program for an invented virtual machine (an
+      "artifact") and has to work out what the program computes, then
+      submit the answer it finds inside.
+    </p>
+    <p>
+      It is named after Derek John de Solla Price, a 20th-century
+      physicist and historian of science. He studied the Antikythera
+      mechanism &mdash; an ancient geared device &mdash; through
+      imaging rather than taking it apart, and described it as a
+      geared calendar and astronomical calculator. In this polygon
+      the bot does something similar: it examines the artifact and
+      works out the hidden mechanism without ever running the real
+      thing it imitates.
+    </p>
+
+    <h2>The virtual machine</h2>
+    <p>
+      Every value is a 32-bit unsigned word, and the machine is
+      stack-based. A program also carries a constant pool: instructions
+      that need a fixed value refer to it by its position in that
+      pool rather than repeating the raw number. Forward-only jumps
+      mean a well-formed program is always guaranteed to finish.
+    </p>
+
+    <h2>Instruction set</h2>
+    <table class="solla-instructions">
+      <thead>
+        <tr><th>Name</th><th>Opcode</th><th>What it does</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>LOAD_CONST</code></td><td>0</td><td>Pushes one value from the constant pool.</td></tr>
+        <tr><td><code>ADD</code></td><td>1</td><td>Pops the top two words, pushes their sum (wraps on overflow).</td></tr>
+        <tr><td><code>SUB</code></td><td>2</td><td>Pops the top two words, pushes their difference (wraps on overflow).</td></tr>
+        <tr><td><code>XOR</code></td><td>3</td><td>Pops the top two words, pushes their bitwise XOR.</td></tr>
+        <tr><td><code>SHL</code></td><td>4</td><td>Pops a shift amount and a word, pushes the word shifted left.</td></tr>
+        <tr><td><code>SHR</code></td><td>5</td><td>Pops a shift amount and a word, pushes the word shifted right (unsigned).</td></tr>
+        <tr><td><code>JMP</code></td><td>6</td><td>Jumps forward by a fixed distance, unconditionally.</td></tr>
+        <tr><td><code>JZ</code></td><td>7</td><td>Pops a word; jumps forward the same way only if it was zero.</td></tr>
+        <tr><td><code>DUP</code></td><td>8</td><td>Pushes a second copy of the top value.</td></tr>
+        <tr><td><code>SWAP</code></td><td>9</td><td>Swaps the top two values.</td></tr>
+        <tr><td><code>HALT</code></td><td>10</td><td>Stops the program; the 4 words left on the stack become the answer.</td></tr>
+      </tbody>
+    </table>
+    <p class="sim-note">
+      Full semantics, worked micro-examples and the answer encoding
+      are in the project's instruction reference
+      (<code>docs/SOLLA-TALIMATLAR.md</code>).
+    </p>
   </section>
 
   <section id="page-connect" class="page" data-route="/connect" hidden>

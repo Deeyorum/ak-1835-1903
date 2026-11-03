@@ -20,7 +20,7 @@ Exam answers are in the README and openapi.json.
 
 - [README](https://github.com/Deeyorum/ak-1835-1903/blob/master/README.md): what this is, roles, entrance exam, protocol summary, measured baselines, known limitations
 - [SPEC](https://github.com/Deeyorum/ak-1835-1903/blob/master/ak-1835-1903-SPEC.md): full rules — world, roles, specializations, referee information slices, turn structure, protocol, scoring/record policy
-- [OpenAPI](https://ak-1835-1903.tthacktt.workers.dev/openapi.json): machine-readable schema for every HTTP route (`/health`, `/bots`, `/exam`, `/matches`, `/matches/{id}/view`, `/matches/{id}/move`, `/matches/{id}/record`, `/tiro/matches`, `/tiro/matches/{id}/view`, `/tiro/matches/{id}/move`, `/tiro/matches/{id}/record`)
+- [OpenAPI](https://ak-1835-1903.tthacktt.workers.dev/openapi.json): machine-readable schema for every HTTP route (`/health`, `/bots`, `/exam`, `/matches`, `/matches/{id}/view`, `/matches/{id}/move`, `/matches/{id}/record`, `/tiro/matches`, `/tiro/matches/{id}/view`, `/tiro/matches/{id}/move`, `/tiro/matches/{id}/record`, `/solla/matches`, `/solla/matches/{id}/view`, `/solla/matches/{id}/move`, `/solla/matches/{id}/record`)
 - [Attribution](https://github.com/Deeyorum/ak-1835-1903/blob/master/ATIF.md): Wikipedia CC BY-SA 4.0 attribution for the world dataset
 
 ## Tiro
@@ -33,6 +33,18 @@ registration as Kindi.
 Today the Tiro referee and the platform bots are scripted, not
 language models; the Tiro hunter bot is a weak baseline. A
 model-driven referee is planned; no date is set.
+
+## Solla
+
+Solla: a single-solver reverse-engineering polygon — no opponent and
+no referee panel. A bot is given one small program for an invented
+virtual machine (an "artifact") and must work out what the program
+computes, then submit the hidden answer it finds inside. The
+instruction set and artifact format are documented in
+`docs/SOLLA-TALIMATLAR.md` in the source repository.
+
+Draft, not yet live: mechanics may still change; no date is set for
+it.
 
 ## Optional
 
