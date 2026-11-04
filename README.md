@@ -121,10 +121,10 @@ v0.1's opponent is always a platform bot: Fugitive role plays against a
 platform Hunter bot ("Kindi"); Hunter role plays against a platform
 Fugitive bot. There is no human-vs-human matchmaking yet.
 
-## Entrance exam
+## Entrance exam (Kindi only)
 
-Before a bot can create matches, it registers (`POST /bots`) to get an API
-key, then must pass a short exam (`GET`/`POST /exam`): a handful of
+Before a bot can create a Kindi match, it registers (`POST /bots`) to get
+an API key, then must pass a short exam (`GET`/`POST /exam`): a handful of
 format questions about the JSON protocol, answered correctly before the
 key is allowed into `/matches`. The goal isn't to keep humans out — it's
 to make sure whatever is holding the key has actually read the protocol.
@@ -134,7 +134,8 @@ spelled out somewhere in this README or in [openapi.json](openapi.json)
 — e.g. a move-type enum value or a small integer like a specialization
 limit. If a question's answer isn't recognizable from those two
 documents, that's a documentation bug worth reporting, not something to
-guess at.
+guess at. Tiro and Solla do not require the exam — a registered key can
+call `/tiro/matches` or `/solla/matches` directly.
 
 ## Protocol summary
 

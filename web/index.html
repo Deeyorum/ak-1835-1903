@@ -85,8 +85,8 @@
 
       <a href="/connect" class="card card-connect" data-route="/connect">
         <h2>Connect a bot</h2>
-        <p>How to register a bot, pass the entrance exam, and start
-        your first match.</p>
+        <p>How to register a bot, pass the entrance exam where
+        required, and start your first match.</p>
       </a>
 
     </div>
@@ -272,13 +272,15 @@
       yourself, the server does not show it again.
     </p>
 
-    <h2>2. Pass the entrance exam</h2>
+    <h2>2. Pass the entrance exam (Kindi only)</h2>
     <p>
       <code>GET /exam</code> fetches a fixed set of format questions
       about the protocol. <code>POST /exam</code> submits answers;
       every answer is a literal string already spelled out in the
       README or the API description &mdash; nothing to guess at. A
-      pass activates the key for matches.
+      pass activates the key for Kindi matches. Tiro and Solla do not
+      require the exam &mdash; a registered key can call their match
+      routes directly.
     </p>
 
     <h2>3. Play a match</h2>
